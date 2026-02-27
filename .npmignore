@@ -1,0 +1,13 @@
+src/
+tests/
+.github/
+.claude/
+.env
+.env.*
+data/
+logs/
+tsconfig*.json
+*.ts
+!dist/**/*.d.ts
+SKILL.md
+scrape-nationwide.sh
