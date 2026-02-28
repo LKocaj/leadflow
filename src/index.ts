@@ -1,5 +1,5 @@
 /**
- * LeadScrape - Enterprise Lead Scraper
+ * LeadFlow - Business Lead Generation & Enrichment
  *
  * Main entry point for programmatic usage
  */

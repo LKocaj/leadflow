@@ -3,9 +3,9 @@
  */
 
 /**
- * Base error for all LeadScrape errors
+ * Base error for all LeadFlow errors
  */
-export class LeadScrapeError extends Error {
+export class LeadFlowError extends Error {
   constructor(
     message: string,
     public code: string,
@@ -13,7 +13,7 @@ export class LeadScrapeError extends Error {
     public metadata?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'LeadScrapeError';
+    this.name = 'LeadFlowError';
     Error.captureStackTrace(this, this.constructor);
   }
 
@@ -31,7 +31,7 @@ export class LeadScrapeError extends Error {
 /**
  * Error from a scraper
  */
-export class ScraperError extends LeadScrapeError {
+export class ScraperError extends LeadFlowError {
   constructor(
     message: string,
     public source: string,
@@ -51,7 +51,7 @@ export class ScraperError extends LeadScrapeError {
 /**
  * Rate limit hit
  */
-export class RateLimitError extends LeadScrapeError {
+export class RateLimitError extends LeadFlowError {
   constructor(
     public retryAfterMs: number,
     source: string
@@ -69,7 +69,7 @@ export class RateLimitError extends LeadScrapeError {
 /**
  * Anti-bot detection triggered
  */
-export class BlockedError extends LeadScrapeError {
+export class BlockedError extends LeadFlowError {
   constructor(
     source: string,
     public blockType: 'captcha' | 'ip_block' | 'fingerprint' | 'unknown' = 'unknown'
@@ -87,7 +87,7 @@ export class BlockedError extends LeadScrapeError {
 /**
  * Error from enrichment API
  */
-export class EnrichmentError extends LeadScrapeError {
+export class EnrichmentError extends LeadFlowError {
   constructor(
     message: string,
     public provider: string,
@@ -107,7 +107,7 @@ export class EnrichmentError extends LeadScrapeError {
 /**
  * Missing required configuration
  */
-export class ConfigurationError extends LeadScrapeError {
+export class ConfigurationError extends LeadFlowError {
   constructor(message: string, public configKey?: string) {
     super(message, 'CONFIGURATION', false, { configKey });
     this.name = 'ConfigurationError';
@@ -117,7 +117,7 @@ export class ConfigurationError extends LeadScrapeError {
 /**
  * Database error
  */
-export class DatabaseError extends LeadScrapeError {
+export class DatabaseError extends LeadFlowError {
   constructor(
     message: string,
     public operation: string,
@@ -132,7 +132,7 @@ export class DatabaseError extends LeadScrapeError {
 /**
  * Validation error
  */
-export class ValidationError extends LeadScrapeError {
+export class ValidationError extends LeadFlowError {
   constructor(message: string, public field?: string) {
     super(message, 'VALIDATION', false, { field });
     this.name = 'ValidationError';

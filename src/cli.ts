@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * LeadScrape Pro CLI
+ * LeadFlow CLI
  */
 
 import { Command } from 'commander';
@@ -79,11 +79,6 @@ const tradeMap: Record<string, Trade> = {
 const sourceMap: Record<string, LeadSource> = {
   google: LeadSource.GOOGLE_MAPS,
   yelp: LeadSource.YELP,
-  linkedin: LeadSource.LINKEDIN,
-  homeadvisor: LeadSource.HOMEADVISOR,
-  angi: LeadSource.ANGI,
-  thumbtack: LeadSource.THUMBTACK,
-  bbb: LeadSource.BBB,
 };
 
 /** Status key -> enum mapping */
@@ -181,7 +176,7 @@ program
       return;
     }
 
-    log('\n LeadScrape Configuration:');
+    log('\n LeadFlow Configuration:');
     log(`   Location: ${options.location}`);
     if (location.radius) log(`   Radius: ${location.radius} miles`);
     log(`   Trades: ${trades.join(', ')}`);

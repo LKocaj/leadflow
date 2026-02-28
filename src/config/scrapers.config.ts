@@ -74,7 +74,7 @@ export const scraperConfigs: Record<LeadSource, ScraperConfig> = {
 
   [LeadSource.HOMEADVISOR]: {
     name: LeadSource.HOMEADVISOR,
-    enabled: true,
+    enabled: false, // No scraper implementation yet
     rateLimit: {
       maxRequests: 10, // Aggressive anti-bot
       windowMs: 60000,
@@ -95,7 +95,7 @@ export const scraperConfigs: Record<LeadSource, ScraperConfig> = {
 
   [LeadSource.ANGI]: {
     name: LeadSource.ANGI,
-    enabled: true,
+    enabled: false, // No scraper implementation yet
     rateLimit: {
       maxRequests: 10, // Aggressive anti-bot
       windowMs: 60000,
@@ -116,7 +116,7 @@ export const scraperConfigs: Record<LeadSource, ScraperConfig> = {
 
   [LeadSource.THUMBTACK]: {
     name: LeadSource.THUMBTACK,
-    enabled: true,
+    enabled: false, // No scraper implementation yet
     rateLimit: {
       maxRequests: 10,
       windowMs: 60000,
@@ -137,7 +137,7 @@ export const scraperConfigs: Record<LeadSource, ScraperConfig> = {
 
   [LeadSource.BBB]: {
     name: LeadSource.BBB,
-    enabled: true,
+    enabled: false, // No scraper implementation yet
     rateLimit: {
       maxRequests: 30, // Less aggressive anti-bot
       windowMs: 60000,
