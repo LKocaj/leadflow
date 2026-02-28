@@ -1,12 +1,12 @@
 {
-  "name": "leadscrape-pro",
+  "name": "leadflow",
   "version": "1.0.0",
-  "description": "Multi-source business lead scraper CLI. Scrapes Google Maps & Yelp, deduplicates with fuzzy matching, enriches emails, exports to XLSX/CSV.",
+  "description": "Business lead generation with waterfall email enrichment, verification, scoring, and CRM-native exports. Google Maps & Yelp, Hunter/Apollo/Dropcontact enrichment, ZeroBounce/Twilio verification, HubSpot/Salesforce/Pipedrive/Airtable export.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "leadscrape": "./dist/cli.js"
+    "leadflow": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -23,7 +23,7 @@
     "google-maps",
     "yelp",
     "business-leads",
-    "lead-scraping",
+    "leadflow",
     "deduplication",
     "enrichment",
     "cli",
@@ -31,7 +31,12 @@
     "openclaw",
     "clawhub"
   ],
-  "author": "OnCall Automation",
+  "author": "OnCall Automation <info@oncallautomation.ai> (https://oncallautomation.ai)",
+  "homepage": "https://oncallautomation.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LKocaj/leadflow"
+  },
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.9",
@@ -65,7 +70,8 @@
   "files": [
     "dist/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "SKILL.md"
   ],
   "engines": {
     "node": ">=20.0.0"

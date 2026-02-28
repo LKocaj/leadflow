@@ -74,9 +74,9 @@ interface YelpLocation {
  */
 const TRADE_TO_CATEGORIES: Partial<Record<Trade, string[]>> = {
   // Home Services
-  [Trade.HVAC]: ['hvac', 'heating', 'airconditioning', 'hvacr'],
+  [Trade.HVAC]: ['hvac', 'heating', 'airconditioning'],
   [Trade.PLUMBING]: ['plumbing', 'waterheaterinstallation'],
-  [Trade.ELECTRICAL]: ['electricians', 'lighting', 'electricalrepair'],
+  [Trade.ELECTRICAL]: ['electricians', 'lighting'],
   [Trade.ROOFING]: ['roofing', 'gutterservices'],
   [Trade.GENERAL]: ['contractors', 'homeservices'],
   [Trade.LANDSCAPING]: ['landscaping', 'lawnservices', 'gardeners'],
@@ -87,20 +87,57 @@ const TRADE_TO_CATEGORIES: Partial<Record<Trade, string[]>> = {
   [Trade.FENCING]: ['fences', 'fencesandgates'],
   [Trade.TREE_SERVICE]: ['treeservices', 'treeremovals'],
   [Trade.POOL]: ['swimmingpools', 'poolservice', 'poolcleaners'],
+  [Trade.WINDOWS]: ['windows_installation', 'doorinstallation'],
+  [Trade.GARAGE_DOOR]: ['garagedoorservices'],
+  [Trade.CONCRETE]: ['masonry_concrete'],
+  [Trade.SIDING]: ['siding'],
+  [Trade.INSULATION]: ['insulation_installation'],
+  [Trade.SOLAR]: ['solarinstallation', 'solarpanelcleaning'],
+  [Trade.HANDYMAN]: ['handyman'],
+  [Trade.APPLIANCE]: ['appliancesrepair'],
+  [Trade.LOCKSMITH]: ['locksmiths'],
+  [Trade.MOVING]: ['movers', 'localmovers'],
   // Auto
   [Trade.AUTO_REPAIR]: ['autorepair', 'mechanics', 'oilchange'],
   [Trade.AUTO_BODY]: ['autobodyshops', 'collisionrepair'],
+  [Trade.AUTO_DETAILING]: ['autodetailing', 'carwash'],
   [Trade.TOWING]: ['towing', 'roadsideassistance'],
   // Healthcare
   [Trade.DENTAL]: ['dentists', 'cosmeticdentists', 'generaldentistry'],
+  [Trade.MEDICAL]: ['doctors', 'familypractice', 'internalmed'],
   [Trade.CHIROPRACTIC]: ['chiropractors'],
   [Trade.VETERINARY]: ['vet', 'animalhospitals', 'veterinarians'],
-  // Professional
+  [Trade.PHARMACY]: ['pharmacy'],
+  // Professional Services
   [Trade.LEGAL]: ['lawyers', 'personalinjurylaw', 'divorcelawyers', 'estateplanninglaw'],
   [Trade.ACCOUNTING]: ['accountants', 'taxservices', 'bookkeepers'],
   [Trade.REAL_ESTATE]: ['realestateagents', 'realestateservices'],
   [Trade.INSURANCE]: ['insurance', 'autoinsurance', 'homeinsurance'],
-  [Trade.UNKNOWN]: ['homeservices'],
+  [Trade.MARKETING]: ['marketing', 'advertisingagencies', 'graphicdesign'],
+  [Trade.IT_SERVICES]: ['itservices', 'computerrepair', 'datarecovery'],
+  [Trade.CONSULTING]: ['businessconsulting', 'managementconsulting'],
+  // Food & Hospitality
+  [Trade.RESTAURANT]: ['restaurants', 'newamerican', 'italian', 'mexican'],
+  [Trade.CATERING]: ['catering', 'eventplanning'],
+  [Trade.BAKERY]: ['bakeries', 'customcakes'],
+  [Trade.HOTEL]: ['hotels', 'bedbreakfast'],
+  // Retail
+  [Trade.RETAIL]: ['shopping', 'fashion', 'giftshops'],
+  [Trade.ECOMMERCE]: ['shopping'],
+  // Personal Services
+  [Trade.SALON]: ['hair', 'hairsalons', 'spas', 'barbers', 'nailsalons'],
+  [Trade.FITNESS]: ['gyms', 'personaltrainers', 'yoga', 'pilates'],
+  [Trade.PHOTOGRAPHY]: ['photographers', 'eventphotography'],
+  [Trade.PET_SERVICES]: ['petgroomers', 'dogwalkers', 'petsitting'],
+  // Education
+  [Trade.TUTORING]: ['tutoring', 'testprep', 'educationalservices'],
+  [Trade.DAYCARE]: ['childcare', 'preschools'],
+  // Other
+  [Trade.MANUFACTURING]: ['manufacturing'],
+  [Trade.CONSTRUCTION]: ['contractors', 'constructioncompanies'],
+  [Trade.TRANSPORTATION]: ['couriers', 'transportation'],
+  [Trade.NONPROFIT]: ['nonprofit'],
+  [Trade.UNKNOWN]: ['localservices'],
 };
 
 /**
@@ -181,12 +218,18 @@ export class YelpScraper extends BaseScraper {
 
       while (hasMore && offset < this.MAX_OFFSET) {
         try {
+          // Convert miles to meters for Yelp API (max 40000m ~= 25 miles)
+          const radiusMeters = query.location.radius
+            ? Math.min(Math.round(query.location.radius * 1609.34), 40000)
+            : undefined;
+
           const response = await this.withRetry(() =>
             this.searchBusinesses(apiKey, {
               location,
               categories: categories.join(','),
               limit: this.MAX_RESULTS_PER_REQUEST,
               offset,
+              radius: radiusMeters,
             })
           );
 

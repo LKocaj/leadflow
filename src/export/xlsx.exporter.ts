@@ -345,3 +345,212 @@ function splitName(fullName?: string): { firstName: string; lastName: string } {
   const lastName = parts.slice(1).join(' ');
   return { firstName, lastName };
 }
+
+// ============================================================================
+// CRM-Native Export Formats
+// ============================================================================
+
+function csvEscape(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+async function writeCsvFile(path: string, headers: string[], rows: string[][]): Promise<void> {
+  const dir = dirname(path);
+  if (!existsSync(dir)) {
+    await mkdir(dir, { recursive: true });
+  }
+  const csv = [
+    headers.join(','),
+    ...rows.map(row => row.map(csvEscape).join(',')),
+  ].join('\n');
+  const { writeFile } = await import('fs/promises');
+  await writeFile(path, csv, 'utf-8');
+}
+
+/**
+ * Export to HubSpot-compatible CSV
+ * Fields: firstname, lastname, email, company, phone, website, city, state, zip, jobtitle, lead_score
+ */
+export async function exportToHubspot(
+  outputPath?: string,
+  filters?: LeadFilters
+): Promise<{ path: string; count: number; skipped: number }> {
+  const finalPath = outputPath ?? getDefaultOutputPath().replace('.xlsx', '-hubspot.csv');
+  const allLeads = findLeads(filters);
+  const leads = allLeads.filter(l => l.email && l.email.trim().length > 0);
+  const skipped = allLeads.length - leads.length;
+
+  if (leads.length === 0) {
+    return { path: finalPath, count: 0, skipped };
+  }
+
+  const headers = [
+    'firstname', 'lastname', 'email', 'company', 'phone',
+    'website', 'city', 'state', 'zip', 'jobtitle',
+    'hs_lead_status', 'leadscore',
+  ];
+
+  const rows = leads.map(lead => {
+    const name = splitName(lead.contactName);
+    const position = (lead.metadata?.enrichmentPosition as string) ?? '';
+    return [
+      name.firstName, name.lastName, lead.email ?? '', lead.companyName,
+      formatPhoneDisplay(lead.phone), lead.website ?? '',
+      lead.city ?? '', lead.state ?? '', lead.zipCode ?? '',
+      position, lead.status, lead.leadScore?.toString() ?? '',
+    ];
+  });
+
+  await writeCsvFile(finalPath, headers, rows);
+  logger.info(`Exported ${leads.length} leads to HubSpot format: ${finalPath}`);
+  return { path: finalPath, count: leads.length, skipped };
+}
+
+/**
+ * Export to Salesforce-compatible CSV
+ * Fields: FirstName, LastName, Email, Company, Phone, Website, Street, City, State, PostalCode, LeadSource, Status, Rating
+ */
+export async function exportToSalesforce(
+  outputPath?: string,
+  filters?: LeadFilters
+): Promise<{ path: string; count: number; skipped: number }> {
+  const finalPath = outputPath ?? getDefaultOutputPath().replace('.xlsx', '-salesforce.csv');
+  const allLeads = findLeads(filters);
+  const leads = allLeads.filter(l => l.email && l.email.trim().length > 0);
+  const skipped = allLeads.length - leads.length;
+
+  if (leads.length === 0) {
+    return { path: finalPath, count: 0, skipped };
+  }
+
+  const headers = [
+    'FirstName', 'LastName', 'Email', 'Company', 'Phone',
+    'Website', 'Street', 'City', 'State', 'PostalCode',
+    'LeadSource', 'Status', 'Rating', 'Description',
+  ];
+
+  const rows = leads.map(lead => {
+    const name = splitName(lead.contactName);
+    return [
+      name.firstName, name.lastName, lead.email ?? '', lead.companyName,
+      formatPhoneDisplay(lead.phone), lead.website ?? '',
+      lead.address ?? '', lead.city ?? '', lead.state ?? '', lead.zipCode ?? '',
+      lead.source, mapToSalesforceStatus(lead.status),
+      lead.rating?.toString() ?? '', lead.notes ?? '',
+    ];
+  });
+
+  await writeCsvFile(finalPath, headers, rows);
+  logger.info(`Exported ${leads.length} leads to Salesforce format: ${finalPath}`);
+  return { path: finalPath, count: leads.length, skipped };
+}
+
+function mapToSalesforceStatus(status: string): string {
+  const map: Record<string, string> = {
+    New: 'Open - Not Contacted',
+    Enriched: 'Open - Not Contacted',
+    Verified: 'Working - Contacted',
+    Exported: 'Working - Contacted',
+    Invalid: 'Closed - Not Converted',
+  };
+  return map[status] ?? 'Open - Not Contacted';
+}
+
+/**
+ * Export to Pipedrive-compatible CSV
+ * Fields: Name, Email, Phone, Organization, Address, Note, Label
+ */
+export async function exportToPipedrive(
+  outputPath?: string,
+  filters?: LeadFilters
+): Promise<{ path: string; count: number; skipped: number }> {
+  const finalPath = outputPath ?? getDefaultOutputPath().replace('.xlsx', '-pipedrive.csv');
+  const allLeads = findLeads(filters);
+  const leads = allLeads.filter(l => l.email && l.email.trim().length > 0);
+  const skipped = allLeads.length - leads.length;
+
+  if (leads.length === 0) {
+    return { path: finalPath, count: 0, skipped };
+  }
+
+  const headers = [
+    'Name', 'Email', 'Phone', 'Organization', 'Address',
+    'Note', 'Label', 'Website',
+  ];
+
+  const rows = leads.map(lead => {
+    const fullAddress = formatFullAddress({
+      address: lead.address, city: lead.city,
+      state: lead.state, zipCode: lead.zipCode,
+    });
+    return [
+      lead.contactName || lead.companyName,
+      lead.email ?? '', formatPhoneDisplay(lead.phone),
+      lead.companyName, fullAddress,
+      lead.notes ?? '', lead.trade, lead.website ?? '',
+    ];
+  });
+
+  await writeCsvFile(finalPath, headers, rows);
+  logger.info(`Exported ${leads.length} leads to Pipedrive format: ${finalPath}`);
+  return { path: finalPath, count: leads.length, skipped };
+}
+
+/**
+ * Export to Airtable-compatible CSV
+ * Matches OnCall aaa-website CRM field mapping:
+ *   Name, Email, Phone, Source, Status, Lead Score, AI Summary, Message
+ * Plus extra columns: Company, Website, Trade, City, State, Rating, Reviews
+ */
+export async function exportToAirtable(
+  outputPath?: string,
+  filters?: LeadFilters
+): Promise<{ path: string; count: number; skipped: number }> {
+  const finalPath = outputPath ?? getDefaultOutputPath().replace('.xlsx', '-airtable.csv');
+  const leads = findLeads(filters);
+
+  if (leads.length === 0) {
+    return { path: finalPath, count: 0, skipped: 0 };
+  }
+
+  // Core fields match the aaa-website CRMIntegrationPanel field_mapping
+  const headers = [
+    'Name', 'Email', 'Phone', 'Company', 'Website',
+    'Source', 'Status', 'Lead Score', 'Trade',
+    'City', 'State', 'Address', 'Rating', 'Reviews',
+    'AI Summary', 'Message',
+  ];
+
+  const rows = leads.map(lead => {
+    const contactName = lead.contactName || '';
+    const score = lead.leadScore ?? 0;
+
+    // Build an AI summary from available data
+    const summaryParts: string[] = [];
+    summaryParts.push(`${lead.trade} business in ${lead.city || 'unknown city'}${lead.state ? ', ' + lead.state : ''}`);
+    if (lead.rating) summaryParts.push(`${lead.rating} stars`);
+    if (lead.reviewCount) summaryParts.push(`${lead.reviewCount} reviews`);
+    if (lead.emailVerified) summaryParts.push('email verified');
+    if (lead.phoneType === 'mobile') summaryParts.push('mobile phone');
+    if (score >= 60) summaryParts.push('high-quality lead');
+    else if (score >= 30) summaryParts.push('medium-quality lead');
+    const aiSummary = summaryParts.join('. ') + '.';
+
+    return [
+      contactName, lead.email ?? '', formatPhoneDisplay(lead.phone),
+      lead.companyName, lead.website ?? '',
+      lead.source, lead.status, score.toString(), lead.trade,
+      lead.city ?? '', lead.state ?? '',
+      formatFullAddress({ address: lead.address, city: lead.city, state: lead.state, zipCode: lead.zipCode }),
+      lead.rating?.toString() ?? '', lead.reviewCount?.toString() ?? '',
+      aiSummary, lead.notes ?? '',
+    ];
+  });
+
+  await writeCsvFile(finalPath, headers, rows);
+  logger.info(`Exported ${leads.length} leads to Airtable format: ${finalPath}`);
+  return { path: finalPath, count: leads.length, skipped: 0 };
+}

@@ -61,33 +61,70 @@ interface AddressComponent {
  */
 const TRADE_SEARCH_TERMS: Partial<Record<Trade, string[]>> = {
   // Home Services
-  [Trade.HVAC]: ['HVAC contractor', 'heating and cooling', 'air conditioning repair', 'furnace repair'],
-  [Trade.PLUMBING]: ['plumber', 'plumbing contractor', 'plumbing repair', 'emergency plumber'],
-  [Trade.ELECTRICAL]: ['electrician', 'electrical contractor', 'electrical repair'],
+  [Trade.HVAC]: ['HVAC contractor', 'heating and cooling', 'air conditioning repair'],
+  [Trade.PLUMBING]: ['plumber', 'plumbing contractor', 'emergency plumber'],
+  [Trade.ELECTRICAL]: ['electrician', 'electrical contractor'],
   [Trade.ROOFING]: ['roofing contractor', 'roof repair', 'roofer'],
   [Trade.GENERAL]: ['general contractor', 'home services'],
-  [Trade.LANDSCAPING]: ['landscaping company', 'lawn care service', 'landscape contractor'],
-  [Trade.PEST_CONTROL]: ['pest control', 'exterminator', 'termite control'],
+  [Trade.LANDSCAPING]: ['landscaping company', 'lawn care service'],
+  [Trade.PEST_CONTROL]: ['pest control', 'exterminator'],
   [Trade.CLEANING]: ['cleaning service', 'house cleaning', 'janitorial service'],
-  [Trade.PAINTING]: ['painting contractor', 'house painter', 'commercial painter'],
-  [Trade.FLOORING]: ['flooring contractor', 'hardwood floor installer', 'carpet installer'],
-  [Trade.FENCING]: ['fence company', 'fence contractor', 'fence installer'],
-  [Trade.TREE_SERVICE]: ['tree service', 'tree removal', 'arborist'],
-  [Trade.POOL]: ['pool service', 'pool contractor', 'pool cleaning'],
+  [Trade.PAINTING]: ['painting contractor', 'house painter'],
+  [Trade.FLOORING]: ['flooring contractor', 'hardwood floor installer'],
+  [Trade.FENCING]: ['fence company', 'fence contractor'],
+  [Trade.TREE_SERVICE]: ['tree service', 'tree removal'],
+  [Trade.POOL]: ['pool service', 'pool contractor'],
+  [Trade.WINDOWS]: ['window replacement', 'window installer', 'door installer'],
+  [Trade.GARAGE_DOOR]: ['garage door repair', 'garage door installer'],
+  [Trade.CONCRETE]: ['concrete contractor', 'concrete company'],
+  [Trade.SIDING]: ['siding contractor', 'siding installer'],
+  [Trade.INSULATION]: ['insulation contractor', 'spray foam insulation'],
+  [Trade.SOLAR]: ['solar panel installer', 'solar company'],
+  [Trade.HANDYMAN]: ['handyman', 'handyman service'],
+  [Trade.APPLIANCE]: ['appliance repair', 'appliance service'],
+  [Trade.LOCKSMITH]: ['locksmith', 'locksmith service'],
+  [Trade.MOVING]: ['moving company', 'movers'],
   // Auto
   [Trade.AUTO_REPAIR]: ['auto repair shop', 'mechanic', 'car repair'],
-  [Trade.AUTO_BODY]: ['auto body shop', 'collision repair', 'auto paint'],
-  [Trade.TOWING]: ['towing service', 'tow truck', 'roadside assistance'],
+  [Trade.AUTO_BODY]: ['auto body shop', 'collision repair'],
+  [Trade.AUTO_DETAILING]: ['auto detailing', 'car detailing', 'car wash'],
+  [Trade.TOWING]: ['towing service', 'tow truck'],
   // Healthcare
   [Trade.DENTAL]: ['dentist', 'dental office', 'family dentistry'],
-  [Trade.CHIROPRACTIC]: ['chiropractor', 'chiropractic office', 'back pain treatment'],
+  [Trade.MEDICAL]: ['doctor', 'medical practice', 'family physician'],
+  [Trade.CHIROPRACTIC]: ['chiropractor', 'chiropractic office'],
   [Trade.VETERINARY]: ['veterinarian', 'animal hospital', 'vet clinic'],
-  // Professional
+  [Trade.PHARMACY]: ['pharmacy', 'drugstore'],
+  // Professional Services
   [Trade.LEGAL]: ['lawyer', 'law firm', 'attorney'],
   [Trade.ACCOUNTING]: ['accountant', 'CPA', 'tax preparation', 'bookkeeper'],
   [Trade.REAL_ESTATE]: ['real estate agent', 'realtor', 'real estate broker'],
   [Trade.INSURANCE]: ['insurance agent', 'insurance broker', 'insurance agency'],
-  [Trade.UNKNOWN]: ['contractor'],
+  [Trade.MARKETING]: ['marketing agency', 'digital marketing', 'advertising agency'],
+  [Trade.IT_SERVICES]: ['IT services', 'managed IT', 'computer repair', 'IT consulting'],
+  [Trade.CONSULTING]: ['business consultant', 'consulting firm', 'management consulting'],
+  // Food & Hospitality
+  [Trade.RESTAURANT]: ['restaurant', 'dining', 'cafe'],
+  [Trade.CATERING]: ['catering company', 'catering service'],
+  [Trade.BAKERY]: ['bakery', 'cake shop'],
+  [Trade.HOTEL]: ['hotel', 'inn', 'bed and breakfast'],
+  // Retail
+  [Trade.RETAIL]: ['retail store', 'shop'],
+  [Trade.ECOMMERCE]: ['online store', 'ecommerce business'],
+  // Personal Services
+  [Trade.SALON]: ['hair salon', 'beauty salon', 'spa', 'barber shop'],
+  [Trade.FITNESS]: ['gym', 'fitness center', 'personal trainer', 'yoga studio'],
+  [Trade.PHOTOGRAPHY]: ['photographer', 'photography studio', 'wedding photographer'],
+  [Trade.PET_SERVICES]: ['pet grooming', 'dog walker', 'pet sitter'],
+  // Education
+  [Trade.TUTORING]: ['tutoring service', 'tutor', 'learning center'],
+  [Trade.DAYCARE]: ['daycare', 'childcare', 'preschool'],
+  // Other
+  [Trade.MANUFACTURING]: ['manufacturer', 'manufacturing company'],
+  [Trade.CONSTRUCTION]: ['construction company', 'building contractor'],
+  [Trade.TRANSPORTATION]: ['transportation service', 'logistics company'],
+  [Trade.NONPROFIT]: ['nonprofit organization', 'charity'],
+  [Trade.UNKNOWN]: ['business'],
 };
 
 /**
@@ -183,8 +220,13 @@ export class GoogleMapsScraper extends BaseScraper {
 
         while (hasMore) {
           try {
-            const response = await this.withRetry(() =>
-              this.searchPlaces(apiKey, textQuery, pageToken)
+            // Convert miles to meters for Google API
+          const radiusMeters = query.location.radius
+            ? Math.round(query.location.radius * 1609.34)
+            : undefined;
+
+          const response = await this.withRetry(() =>
+              this.searchPlaces(apiKey, textQuery, pageToken, radiusMeters)
             );
 
             if (!response.places || response.places.length === 0) {
@@ -236,7 +278,8 @@ export class GoogleMapsScraper extends BaseScraper {
   private async searchPlaces(
     apiKey: string,
     textQuery: string,
-    pageToken?: string
+    pageToken?: string,
+    radiusMeters?: number
   ): Promise<PlacesTextSearchResponse> {
     const body: Record<string, unknown> = {
       textQuery,
@@ -244,6 +287,15 @@ export class GoogleMapsScraper extends BaseScraper {
       languageCode: 'en',
       regionCode: 'US',
     };
+
+    // Add location bias with radius if specified
+    if (radiusMeters) {
+      body.locationBias = {
+        circle: {
+          radius: radiusMeters,
+        },
+      };
+    }
 
     if (pageToken) {
       body.pageToken = pageToken;

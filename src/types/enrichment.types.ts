@@ -23,7 +23,68 @@ export type EmailVerificationStatus =
   | 'unknown'
   | 'pending';
 
-export type EnrichmentProvider = 'hunter' | 'apollo' | 'manual';
+export type EnrichmentProvider = 'hunter' | 'apollo' | 'dropcontact' | 'scraper' | 'manual';
+
+/**
+ * Dropcontact API response types
+ */
+export interface DropcontactEnrichResponse {
+  request_id: string;
+  error: boolean;
+  data: DropcontactContact[];
+}
+
+export interface DropcontactContact {
+  email: { email: string; qualification: string } | null;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  phone: string | null;
+  mobile_phone: string | null;
+  company: string | null;
+  website: string | null;
+  linkedin: string | null;
+  job: string | null;
+}
+
+/**
+ * ZeroBounce verification response
+ */
+export interface ZeroBounceValidateResponse {
+  address: string;
+  status: 'valid' | 'invalid' | 'catch-all' | 'unknown' | 'spamtrap' | 'abuse' | 'do_not_mail';
+  sub_status: string;
+  free_email: boolean;
+  did_you_mean: string | null;
+  account: string | null;
+  domain: string | null;
+  domain_age_days: string | null;
+  smtp_provider: string | null;
+  mx_found: string;
+  mx_record: string | null;
+  firstname: string | null;
+  lastname: string | null;
+  gender: string | null;
+  processed_at: string;
+}
+
+/**
+ * Twilio Lookup v2 response
+ */
+export interface TwilioLookupResponse {
+  calling_country_code: string;
+  country_code: string;
+  phone_number: string;
+  national_format: string;
+  valid: boolean;
+  line_type_intelligence?: {
+    carrier_name: string | null;
+    type: 'mobile' | 'landline' | 'fixedVoip' | 'nonFixedVoip' | 'tollFree' | 'voip' | null;
+    error_code: number | null;
+    mobile_country_code: string | null;
+    mobile_network_code: string | null;
+  };
+}
 
 /**
  * Hunter.io API response types

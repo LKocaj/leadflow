@@ -54,6 +54,13 @@ interface LeadRow {
   verified_at: string | null;
   created_at: string;
   updated_at: string;
+  // Verification & scoring columns
+  email_verified: number | null;
+  email_verification_status: string | null;
+  phone_verified: number | null;
+  phone_type: string | null;
+  phone_carrier: string | null;
+  lead_score: number | null;
 }
 
 /**
@@ -88,6 +95,12 @@ function rowToLead(row: LeadRow): Lead {
     scrapedAt: new Date(row.scraped_at),
     enrichedAt: row.enriched_at ? new Date(row.enriched_at) : undefined,
     verifiedAt: row.verified_at ? new Date(row.verified_at) : undefined,
+    emailVerified: row.email_verified ? true : undefined,
+    emailVerificationStatus: row.email_verification_status as Lead['emailVerificationStatus'],
+    phoneVerified: row.phone_verified ? true : undefined,
+    phoneType: row.phone_type as Lead['phoneType'],
+    phoneCarrier: row.phone_carrier ?? undefined,
+    leadScore: row.lead_score ?? undefined,
   };
 }
 
@@ -258,6 +271,12 @@ export function updateLead(
     scrapedAt: 'scraped_at',
     enrichedAt: 'enriched_at',
     verifiedAt: 'verified_at',
+    emailVerified: 'email_verified',
+    emailVerificationStatus: 'email_verification_status',
+    phoneVerified: 'phone_verified',
+    phoneType: 'phone_type',
+    phoneCarrier: 'phone_carrier',
+    leadScore: 'lead_score',
   };
 
   for (const [key, value] of Object.entries(updates)) {
@@ -268,6 +287,10 @@ export function updateLead(
       const column = fieldMap[key] ?? key;
       setClauses.push(`${column} = ?`);
       params.push(value.toISOString());
+    } else if (typeof value === 'boolean') {
+      const column = fieldMap[key] ?? key;
+      setClauses.push(`${column} = ?`);
+      params.push(value ? 1 : 0);
     } else if (typeof value === 'string' || typeof value === 'number' || value === null) {
       const column = fieldMap[key] ?? key;
       setClauses.push(`${column} = ?`);

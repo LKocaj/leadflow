@@ -128,7 +128,27 @@ export interface Lead extends RawLead {
   duplicateOf?: string; // ID of canonical lead if this is a duplicate
   confidence: number; // 0-1 match confidence for enrichment
   metadata: LeadMetadata;
+  // Verification fields
+  emailVerified?: boolean;
+  emailVerificationStatus?: EmailVerificationTag;
+  phoneVerified?: boolean;
+  phoneType?: PhoneLineType;
+  phoneCarrier?: string;
+  // Scoring
+  leadScore?: number; // Composite 0-100
 }
+
+export type EmailVerificationTag =
+  | 'valid'
+  | 'invalid'
+  | 'catch_all'
+  | 'disposable'
+  | 'spam_trap'
+  | 'abuse'
+  | 'do_not_mail'
+  | 'unknown';
+
+export type PhoneLineType = 'mobile' | 'landline' | 'voip' | 'unknown';
 
 export interface LeadMetadata {
   mergedFrom?: string[]; // IDs of leads merged into this one

@@ -28,6 +28,7 @@ export interface ScrapeOptions {
     county?: string;
     state?: string;
     zipCode?: string;
+    radius?: number; // miles
   };
   /** Maximum results per source */
   maxResultsPerSource?: number;

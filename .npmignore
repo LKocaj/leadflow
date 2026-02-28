@@ -9,5 +9,4 @@ logs/
 tsconfig*.json
 *.ts
 !dist/**/*.d.ts
-SKILL.md
 scrape-nationwide.sh

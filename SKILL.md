@@ -1,7 +1,6 @@
 ---
-name: leadscrape-pro
-description: "Scrape business leads from Google Maps & Yelp. Find local businesses by trade and location, deduplicate, enrich with emails, and export to XLSX/CSV."
-version: 1.0.0
+name: leadflow
+description: "Turn any city into a lead list in 60 seconds. Scrapes Google Maps & Yelp, enriches emails via 4-provider waterfall, verifies contacts, scores quality 0-100, and exports straight to your CRM. 50+ industries supported. Built by OnCall Automation."
 metadata:
   openclaw:
     emoji: "\U0001F50D"
@@ -9,127 +8,197 @@ metadata:
     requires:
       env:
         - GOOGLE_PLACES_API_KEY
-        - YELP_API_KEY
       bins:
         - node
         - npm
+    optionalEnv:
+      - YELP_API_KEY
+      - HUNTER_API_KEY
+      - APOLLO_API_KEY
+      - DROPCONTACT_API_KEY
+      - ZEROBOUNCE_API_KEY
+      - TWILIO_ACCOUNT_SID
+      - TWILIO_AUTH_TOKEN
     install:
       - kind: node
-        package: leadscrape-pro
+        package: leadflow
         bins:
-          - leadscrape
+          - leadflow
 ---
 
-# LeadScrape Pro - Business Lead Generation
+# LeadFlow - Business Lead Generation & Enrichment
 
-You are a lead generation specialist. Use the `leadscrape` CLI to find business leads from Google Maps and Yelp, deduplicate them, enrich with email addresses, and export to spreadsheets.
+You are a lead generation specialist. Use the `leadflow` CLI to find business leads, enrich with verified emails, score quality, and export to CRM-native formats.
 
 Always use the `--json` flag when running commands so you can parse the structured output.
 
 ## Setup Check
 
-Before running any commands, verify installation and API keys:
-
 ```bash
-leadscrape status --json
+leadflow status --json
 ```
 
-Check the `data.apiKeys` field. At minimum `GOOGLE_PLACES_API_KEY` must be `true`. `YELP_API_KEY` is recommended for better coverage (doubles the results).
+Check `data.apiKeys`. Required: `GOOGLE_PLACES_API_KEY`. Recommended: `YELP_API_KEY`.
 
-If keys are missing, tell the user:
-- **Google Places API**: Get from https://console.cloud.google.com/apis/credentials (enable "Places API (New)"). Free $200/month credit.
-- **Yelp Fusion API**: Get from https://www.yelp.com/developers/v3/manage_app. Free 5,000 calls/day.
+Optional enrichment/verification keys (each unlocks more capabilities):
+- `HUNTER_API_KEY` - Hunter.io email finder (waterfall step 2)
+- `APOLLO_API_KEY` - Apollo.io people search (waterfall step 3)
+- `DROPCONTACT_API_KEY` - Dropcontact enrichment (waterfall step 4)
+- `ZEROBOUNCE_API_KEY` - Email verification
+- `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` - Phone validation
 
-Set keys in a `.env` file in the working directory:
-```
-GOOGLE_PLACES_API_KEY=your_key_here
-YELP_API_KEY=your_key_here
+Check configured providers:
+```bash
+leadflow providers --json
 ```
 
 ## Available Trades
 
-To see all trade categories:
-
 ```bash
-leadscrape trades --json
+leadflow trades --json
 ```
 
-Categories: `dental`, `legal`, `chiro`, `accounting`, `realestate`, `insurance`, `hvac`, `plumbing`, `electrical`, `roofing`, `general`, `landscaping`, `pest`, `cleaning`, `painting`, `flooring`, `fencing`, `tree`, `pool`, `auto`, `autobody`, `towing`, `vet`
+Key trades: `dental`, `legal`, `chiro`, `accounting`, `realestate`, `insurance`, `hvac`, `plumbing`, `electrical`, `roofing`, `restaurant`, `salon`, `fitness`, `it`, `marketing`, `consulting`, `retail`, `auto`, `vet`
 
 ## Core Workflow
 
 ### 1. Scrape Leads
 
 ```bash
-leadscrape scrape --sources google,yelp --trades <trades> --location "<City, ST>" --max-results <number> --json
+leadflow scrape -s google,yelp -t <trades> -l "<City, ST>" --max-results <n> --radius <miles> --json
 ```
 
-Short flags: `-s` for sources, `-t` for trades, `-l` for location.
-
-**Examples:**
+Examples:
 ```bash
-leadscrape scrape -s google,yelp -t dental,legal -l "Miami, FL" --max-results 100 --json
-leadscrape scrape -s google,yelp -t hvac,plumbing,electrical -l "Chicago, IL" --max-results 60 --json
+leadflow scrape -s google,yelp -t dental,legal -l "Miami, FL" --max-results 100 --json
+leadflow scrape -s google,yelp -t hvac,plumbing -l "Chicago, IL" --max-results 60 --radius 25 --json
 ```
 
-The `--max-results` flag limits results **per source**. With both Google and Yelp at `--max-results 60`, you get up to 120 leads per city.
+`--max-results` limits per source. With both Google + Yelp at 60, you get up to 120 leads/city. `--radius` sets search radius in miles. Deduplication is automatic.
 
-Deduplication runs automatically -- duplicate businesses across sources are merged, not counted twice.
-
-### 2. Check Status
+### 2. Enrich with Emails (Waterfall)
 
 ```bash
-leadscrape status --json
+leadflow enrich --limit 100 --json
 ```
 
-Returns total leads, breakdown by status/source/trade, and API key status.
+The waterfall tries providers in order, stopping on first verified email:
+1. **Website scrape** (free, always runs) - scans contact/about pages
+2. **Hunter.io** (if `HUNTER_API_KEY` set) - domain email search
+3. **Apollo.io** (if `APOLLO_API_KEY` set) - people/company search
+4. **Dropcontact** (if `DROPCONTACT_API_KEY` set) - EU-compliant enrichment
 
-### 3. Enrich with Emails
+Response includes `data.byProvider` showing which provider found each email.
 
-Scrape lead websites for email addresses (no API key required):
+Optional filters: `--trade dental`, `--source google`
+
+### 3. Verify Emails & Phones
 
 ```bash
-leadscrape enrich --limit 100 --json
+# Verify emails via ZeroBounce
+leadflow verify --emails --limit 100 --json
+
+# Validate phones via Twilio
+leadflow verify --phones --limit 100 --json
+
+# Both at once
+leadflow verify --emails --phones --limit 100 --json
 ```
 
-This visits the contact/about pages of leads that have websites but no emails. Optional filters: `--trade dental`, `--source google`.
+Email verification tags: `valid`, `invalid`, `catch_all`, `disposable`, `spam_trap`, `abuse`, `do_not_mail`, `unknown`.
 
-### 4. Export Results
+Phone validation returns line type: `mobile`, `landline`, `voip`.
+
+### 4. Score Leads
 
 ```bash
-leadscrape export --format xlsx --json
+leadflow score --json
 ```
 
-Options:
-- `--format xlsx` or `--format csv`
-- `--status new` or `--status enriched`
-- `--trade dental`
-- `-o /custom/path.xlsx`
+Composite 0-100 score based on:
+- Verified email (+25), phone (+15), website (+10)
+- Rating >= 4.0 (+10), reviews > 50 (+10)
+- Contact name (+10), full address (+5)
+- Personal email (+5), mobile phone (+5), multi-source (+5)
 
-The export path is returned in `data.path`.
+Returns `data.averageScore` and `data.distribution` histogram.
 
-## Multi-City Campaigns
-
-For large campaigns, loop through cities. All leads go into the same database with deduplication:
+### 5. Export
 
 ```bash
-for city in "Miami, FL" "Tampa, FL" "Orlando, FL" "Jacksonville, FL"; do
-  leadscrape scrape -s google,yelp -t dental,legal -l "$city" --max-results 60 --json
+# Standard formats
+leadflow export --format xlsx --json
+leadflow export --format csv --json
+leadflow export --format instantly --json
+
+# CRM-native formats (requires email, skips leads without)
+leadflow export --format hubspot --json
+leadflow export --format salesforce --json
+leadflow export --format pipedrive --json
+```
+
+Filters: `--status enriched`, `--trade dental`, `--min-score 60`, `-o /path/file.csv`
+
+### 6. Webhook (Zapier/n8n/Make)
+
+```bash
+leadflow webhook -u "https://hooks.zapier.com/hooks/catch/..." --status verified --json
+```
+
+POSTs leads as JSON to the URL. Options: `--batch-size 50`, `--trade dental`, `--limit 100`.
+
+## Full Pipeline Example
+
+```bash
+# Scrape multiple cities
+for city in "Miami, FL" "Tampa, FL" "Orlando, FL"; do
+  leadflow scrape -s google,yelp -t dental,legal -l "$city" --max-results 60 --json
 done
-leadscrape enrich --limit 500 --json
-leadscrape export --format xlsx --json
+
+# Enrich emails
+leadflow enrich --limit 500 --json
+
+# Verify
+leadflow verify --emails --phones --limit 200 --json
+
+# Score
+leadflow score --json
+
+# Export to CRM
+leadflow export --format hubspot --status verified --json
+
+# Or send to webhook
+leadflow webhook -u "https://hooks.zapier.com/..." --status verified --json
 ```
 
 ## Rate Limits
 
-- **Google Places API**: $200/month free credit. ~20 results per search page.
-- **Yelp Fusion API**: 5,000 calls/day free. ~50 results per search.
+- **Google Places**: $200/month free credit. ~20 results per page.
+- **Yelp Fusion**: 5,000 calls/day free. ~50 results per search.
+- **Hunter.io**: 25 free searches/month. Paid plans from $34/month.
+- **Apollo.io**: 50 free credits/month. Paid plans from $49/month.
+- **ZeroBounce**: 100 free verifications. Paid from $16/month.
+- **Twilio Lookup**: $0.005/lookup. Pay-as-you-go.
 - Built-in rate limiting prevents API quota violations.
-- For 500+ leads: split across multiple cities, not one massive query.
 
 ## Handling Results
 
 - Check `success` field in every JSON response
-- `data.totalSaved` = number of NEW unique leads added (not duplicates)
-- Export returns `data.path` with the file location
-- Enrichment returns `data.enriched` with count of emails found
+- `data.totalSaved` = new unique leads added
+- `data.enriched` = emails found via waterfall
+- `data.byProvider` = which enrichment provider found each email
+- `data.path` = export file location
+- `data.leadsPosted` = webhook delivery count
+
+## Need a Custom Lead Pipeline?
+
+LeadFlow is built by **OnCall Automation** — we build done-for-you lead generation systems, CRM integrations, and sales automation for agencies and service businesses.
+
+- Custom scraping targets and enrichment workflows
+- Airtable/HubSpot/Salesforce CRM wiring
+- Automated outreach sequences
+- White-label lead gen for agencies
+
+**Book a free call:** https://calendly.com/oncallautomation
+**Email:** info@oncallautomation.ai
+**Website:** https://oncallautomation.ai

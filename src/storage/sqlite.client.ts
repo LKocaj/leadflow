@@ -194,6 +194,17 @@ async function runMigrations(database: Database): Promise<void> {
         )
       `,
     },
+    {
+      name: '005_add_verification_and_scoring_columns',
+      sql: `
+        ALTER TABLE leads ADD COLUMN email_verified INTEGER DEFAULT 0;
+        ALTER TABLE leads ADD COLUMN email_verification_status TEXT;
+        ALTER TABLE leads ADD COLUMN phone_verified INTEGER DEFAULT 0;
+        ALTER TABLE leads ADD COLUMN phone_type TEXT;
+        ALTER TABLE leads ADD COLUMN phone_carrier TEXT;
+        ALTER TABLE leads ADD COLUMN lead_score INTEGER;
+      `,
+    },
   ];
 
   // Apply new migrations
